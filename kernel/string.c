@@ -15,9 +15,11 @@ char *strcpy(char *dst, const char *src) {
 }
 
 char *strncpy(char *dst, const char *src, size_t n) {
-    char *d = dst;
-    while (n-- && (*d++ = *src++));
-    while (n-- > 0) *d++ = '\0';
+    size_t i;
+    for (i = 0; i < n && src[i]; i++)
+        dst[i] = src[i];
+    for (; i < n; i++)
+        dst[i] = '\0';
     return dst;
 }
 

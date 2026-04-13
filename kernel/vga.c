@@ -80,6 +80,8 @@ void vga_puts(const char *s) {
 }
 
 void vga_putint(int n) {
+    /* Handle INT_MIN specially to avoid undefined negation overflow */
+    if (n == (-2147483647 - 1)) { vga_puts("-2147483648"); return; }
     if (n < 0) { vga_putchar('-'); n = -n; }
     if (n >= 10) vga_putint(n / 10);
     vga_putchar('0' + (n % 10));

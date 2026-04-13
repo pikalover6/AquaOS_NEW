@@ -28,9 +28,13 @@ void rtc_read(rtc_time_t *t) {
     int binary_mode  = (status_b & 0x04) != 0;
     int hour24       = (status_b & 0x02) != 0;
 
+    /* Save raw hour to extract PM flag before masking */
+    uint8_t raw_hour = cmos_read(0x04);
+    int pm = (!hour24 && (raw_hour & 0x80)) ? 1 : 0;
+
     t->second = cmos_read(0x00);
     t->minute = cmos_read(0x02);
-    t->hour   = cmos_read(0x04);
+    t->hour   = raw_hour & 0x7F;  /* strip PM bit */
     t->day    = cmos_read(0x07);
     t->month  = cmos_read(0x08);
     uint8_t yr = cmos_read(0x09);
@@ -39,14 +43,18 @@ void rtc_read(rtc_time_t *t) {
     if (!binary_mode) {
         t->second = bcd2bin(t->second);
         t->minute = bcd2bin(t->minute);
-        t->hour   = bcd2bin(t->hour & 0x7F);
+        t->hour   = bcd2bin(t->hour);
         t->day    = bcd2bin(t->day);
         t->month  = bcd2bin(t->month);
         yr        = bcd2bin(yr);
         cent      = bcd2bin(cent);
     }
 
-    if (!hour24 && (t->hour == 12)) t->hour = 0;
+    /* Convert 12-hour → 24-hour: 12 AM = 0, 12 PM = 12, 1-11 PM = 13-23 */
+    if (!hour24) {
+        if (t->hour == 12) t->hour = 0;   /* midnight: 12 AM → 0 */
+        if (pm)            t->hour += 12; /* afternoon: add 12 */
+    }
 
     /* Century handling */
     if (cent != 0)
